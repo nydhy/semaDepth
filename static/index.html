@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SemaDepth — Spatial Sensor</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="logo">SEMA<span>DEPTH</span></div>
+      <div class="header-version">SPATIAL SENSOR v2.1.0</div>
+      <div class="header-status">
+        <div class="status-pill"><div class="status-dot green"></div>YOLO ACTIVE</div>
+        <div class="status-pill"><div class="status-dot cyan"></div>LLM READY</div>
+        <div class="status-pill"><div class="status-dot orange"></div>CALIBRATED</div>
+        <div class="fps-counter" id="fps">-- FPS</div>
+      </div>
+    </header>
+
+    <div class="panel-left">
+      <div class="panel-section">
+        <div class="panel-label">UPLOAD CONSOLE</div>
+        <button class="neon-button" id="uploadBtn">LOAD IMAGE</button>
+        <input id="fileInput" type="file" accept="image/*" hidden />
+        <input id="calibrationFileInput" type="file" accept="image/*" hidden />
+        <div class="sub-text" id="imageMeta">No image loaded.</div>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-label">TARGETING HUD</div>
+        <div class="target-display">
+          <div class="target-class" id="targetClass">NO TARGET</div>
+          <div class="target-confidence">CONF: <span id="confVal">--%</span></div>
+          <div class="confidence-bar"><div class="confidence-fill" id="confidenceFill"></div></div>
+          <div class="distance-display">
+            <div class="distance-label">EST. DISTANCE</div>
+            <div class="distance-value" id="distVal">--</div>
+            <div class="distance-unit" id="distUnitText">METERS</div>
+          </div>
+          <div class="toggle-row" style="margin-top:10px;">
+            <div class="toggle-label">DISTANCE UNIT</div>
+            <div class="unit-toggle" id="unitToggle">
+              <button class="unit-btn active" data-unit="m" type="button">M</button>
+              <button class="unit-btn" data-unit="ft" type="button">FT</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-label">OBJECT METADATA</div>
+        <div class="meta-grid">
+          <div class="meta-item">
+            <div class="meta-key">REF WIDTH</div>
+            <div class="meta-val cyan" id="refWidth">-- m</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-key">BBOX PX</div>
+            <div class="meta-val" id="bboxPx">-- px</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-key">FOCAL K</div>
+            <div class="meta-val cyan" id="focalMeta">1400.0</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-key">LLM SRC</div>
+            <div class="meta-val green">LLAMA3</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-label">CALIBRATION CONSOLE</div>
+        <div class="cal-row">
+          <div class="cal-label">FOCAL CONSTANT (K)</div>
+          <div class="cal-val" id="focalVal">1400.0</div>
+        </div>
+        <input class="cyber-slider" id="focalSlider" type="range" min="100" max="4000" step="1" value="1400" />
+        <div class="sub-text" id="calibrationWarning">Calibration required: hold any object approximately 1 foot away — about the length of your forearm — and upload a calibration photo.</div>
+        <div class="cal-row">
+          <div class="cal-label">INFERENCE RES</div>
+          <div class="cal-val">1280 px</div>
+        </div>
+        <input class="cyber-slider" type="range" min="320" max="1280" step="320" value="1280" disabled />
+        <div class="toggle-row">
+          <div class="toggle-label">PRECISION MODE (1280px)</div>
+          <div class="toggle on"><div class="toggle-knob"></div></div>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-label">LLM FALLBACK</div>
+          <div class="toggle on"><div class="toggle-knob"></div></div>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-label">SHOW DEPTH MAP</div>
+          <div class="toggle off"><div class="toggle-knob"></div></div>
+        </div>
+      </div>
+
+      <div class="panel-section" style="flex: 1">
+        <div class="panel-label">TRIANGLE SIMILARITY</div>
+        <div class="formula-box" id="formulaBox">
+          D = (<span>K</span> × <strong>W_real</strong>) / <span>W_pixel</span>
+          <br />
+          D = (<span>1400.0</span> × <strong>--</strong>) / <span>--</span>
+          <br />
+          D = <strong style="color:var(--green)">-- m</strong>
+        </div>
+      </div>
+    </div>
+
+    <div class="scanner-view" id="scanner">
+      <canvas id="scannerCanvas"></canvas>
+      <div class="auto-calibration-badge" id="autoCalibrationBadge"></div>
+      <div class="calibration-overlay" id="calibrationOverlay">
+        <div class="calibration-panel">
+          <div class="panel-label">SESSION CALIBRATION</div>
+          <div class="calibration-title">Hold any object approximately 1 foot away — about the length of your forearm — and take a photo, then upload it here.</div>
+          <div class="calibration-guide">
+            <div class="guide-bracket tl"></div>
+            <div class="guide-bracket tr"></div>
+            <div class="guide-bracket bl"></div>
+            <div class="guide-bracket br"></div>
+            <div class="guide-label">PLACE OBJECT HERE · APPROX 1 FT</div>
+          </div>
+          <button class="neon-button" id="startCalibrationBtn">UPLOAD CALIBRATION PHOTO</button>
+          <div class="sub-text" id="calibrationStatusText">Calibration is required before measurement. Hold any object approximately 1 foot away — about the length of your forearm — and upload it here.</div>
+        </div>
+      </div>
+      <div class="corner tl"></div>
+      <div class="corner tr"></div>
+      <div class="corner bl"></div>
+      <div class="corner br"></div>
+      <div class="scan-line"></div>
+      <div class="crosshair" id="crosshair"><div class="crosshair-ring"></div></div>
+      <div class="hud-text hud-tl">SYS: ONLINE<br/>MODE: DETECT+MEASURE</div>
+      <div class="hud-text hud-tr" id="hudTopRight">OBJECTS: 0<br/>FRAME: 0000</div>
+      <div class="hud-text hud-bl">YOLOv8l · LARGE<br/>MODEL: llama3</div>
+      <div class="hud-text hud-br" id="hudBottomRight">LAT: --ms<br/>INF: --ms</div>
+      <div class="detection-badge" id="detectionBadge">▶ LOAD IMAGE TO START SCANNING</div>
+    </div>
+
+    <div class="panel-right">
+      <div class="panel-section">
+        <div class="panel-label">SPATIAL SESSION LOG</div>
+      </div>
+      <div class="log-table" id="sessionLog"></div>
+      <div class="stats-bar">
+        <div class="stat-cell">
+          <div class="stat-num" id="statMeasured">0</div>
+          <div class="stat-lbl">MEASURED</div>
+        </div>
+        <div class="stat-cell">
+          <div class="stat-num" id="statAvgDist">--</div>
+          <div class="stat-lbl">AVG DIST</div>
+        </div>
+        <div class="stat-cell">
+          <div class="stat-num" id="statAvgConf">--</div>
+          <div class="stat-lbl">AVG CONF</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
